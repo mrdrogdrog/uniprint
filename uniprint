@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function show_help {
-echo -e "Usage:\t$0 [-U user] [-H host] [-P printer] [-C count] [-N pages_on_paper] [-O orientation] [-K duplex] [-S papersize] files"
+echo -e "Usage:\t$0 [-U user] [-H host] [-P printer] [-C count] [-N pages_on_paper] [-O orientation] [-K duplex] [-S papersize] file"
 echo -e "\t$0 -h"
 echo ""
 echo "Prints File on printer printer as user user logging in on host host"
@@ -49,7 +49,7 @@ while getopts "U:P:H:C:N:K:S:O:h" opt; do
 	esac
 done
 
-shift $((OPTIND-1))
+#shift $((OPTIND-1))
 if [ -z "${UNIUSER}" ]; then
 	echo "No username provided!"
 	exit 1
@@ -87,16 +87,12 @@ fi
 
 ADDITIONALOPTIONS="-N${PAGES} -#${COUNT} -K${DUPLEX} -O${ORIENTATION} -F${PAPERSIZE}"
 
-FILES=$@
-
-if [ -z "${FILES}" ]; then
-	echo "No files provided. Printing from stdin"
+FILE="$@"
+if [ -z "${FILE}" ]; then
+	echo "No file provided. Printing from stdin"
 	exec ssh $UNIUSER@$UNIHOST "lpr -P ${UNIPRINTER} ${UNIOPTIONS} ${ADDITIONALOPTIONS}"
-fi
-
-for FILE in ${FILES}
-do
+else
 	echo "Printing ${FILE} on ${UNIPRINTER} as ${UNIUSER}@${UNIHOST}"
-	cat ${FILE} | ssh $UNIUSER@$UNIHOST "lpr -P ${UNIPRINTER} ${UNIOPTIONS} ${ADDITIONALOPTIONS}"
+	cat "${FILE}" | ssh $UNIUSER@$UNIHOST "lpr -P ${UNIPRINTER} ${UNIOPTIONS} ${ADDITIONALOPTIONS}"
 	exit
-done
+fi
