@@ -89,8 +89,14 @@ ADDITIONALOPTIONS="-N${PAGES} -#${COUNT} -K${DUPLEX} -O${ORIENTATION} -F${PAPERS
 
 FILES=$@
 
+if [ -z "${FILES}" ]; then
+	echo "No files provided. Printing from stdin"
+	exec ssh $UNIUSER@$UNIHOST "lpr -P ${UNIPRINTER} ${UNIOPTIONS} ${ADDITIONALOPTIONS}"
+fi
+
 for FILE in ${FILES}
 do
 	echo "Printing ${FILE} on ${UNIPRINTER} as ${UNIUSER}@${UNIHOST}"
 	cat ${FILE} | ssh $UNIUSER@$UNIHOST "lpr -P ${UNIPRINTER} ${UNIOPTIONS} ${ADDITIONALOPTIONS}"
+	exit
 done
