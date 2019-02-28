@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 
 function show_help {
-echo -e "Usage:\t$0 [-U user] [-H host] [-P printer] [-\# count] [-N pages_on_paper] [-O orientation] [-K duplex] File"
+echo -e "Usage:\t$0 [-U user] [-H host] [-P printer] [-C count] [-N pages_on_paper] [-O orientation] [-K duplex] [-S papersize] files"
 echo -e "\t$0 -h"
 echo ""
 echo "Prints File on printer printer as user user logging in on host host"
 }
 
-if [ -f ~/.uniprintrc ]; then
-	source ~/.uniprintrc
+if [ -f ${HOME}/.config/uniprint.conf ]; then
+	source ${HOME}/.config/uniprint.conf
+elif [ -f /etc/uniprint.conf ]; then
+	source /etc/uniprint.conf
+else
+	echo 'No uniprint.conf! Please use `cp /usr/share/uniprint/example.conf ~/.config/uniprint.conf` and adjust this file for your needs.'
+	exit 1
 fi
 
-while getopts "U:P:H:#:N:K:O:h" opt; do
+while getopts "U:P:H:C:N:K:S:O:h" opt; do
 	case $opt in
 		O)
 			ORIENTATION=$OPTARG
@@ -25,7 +30,7 @@ while getopts "U:P:H:#:N:K:O:h" opt; do
 		H)
 			UNIHOST=$OPTARG
 			;;
-		\#)
+		C)
 			COUNT=$OPTARG
 			;;
 		N)
@@ -33,6 +38,9 @@ while getopts "U:P:H:#:N:K:O:h" opt; do
 			;;
 		K)
 			DUPLEX=$OPTARG
+			;;
+		S)
+			PAPERSIZE=$OPTARG
 			;;
 		h)
 			show_help
@@ -42,16 +50,19 @@ while getopts "U:P:H:#:N:K:O:h" opt; do
 done
 
 shift $((OPTIND-1))
-if [ -z "$UNIUSER" ]; then
-	read -p "Username: " UNIUSER
+if [ -z "${UNIUSER}" ]; then
+	echo "No username provided!"
+	exit 1
 fi
 
 if [ -z "$UNIHOST" ]; then
-	read -p "Host: " UNIHOST
+	echo "No SSH-Host provided!"
+	exit 1
 fi
 
 if [ -z "$UNIPRINTER" ]; then
-	read -p "Printer: " UNIPRINTER
+	echo "No printer provided!"
+	exit 1
 fi
 
 if [ -z "$ORIENTATION" ]; then
@@ -70,13 +81,16 @@ if [ -z "$COUNT" ]; then
 	COUNT=1
 fi
 
-ADDITIONALOPTIONS="-N$PAGES -#$COUNT -K$DUPLEX -O$ORIENTATION"
-
-FILES=$@
-if [ -z "$FILE" ]; then
-	read -p "File: " FILE
+if [ -z "$PAPERSIZE" ]; then
+	PAPERSIZE="a4w"
 fi
 
-echo "Printing $FILE on $UNIPRINTER as $UNIUSER@$UNIHOST"
+ADDITIONALOPTIONS="-N${PAGES} -#${COUNT} -K${DUPLEX} -O${ORIENTATION} -F${PAPERSIZE}"
 
-echo ssh $UNIUSER@$UNIHOST "lpr -P $UNIPRINTER $UNIOPTIONS $ADDITIONALOPTIONS"
+FILES=$@
+
+for FILE in ${FILES}
+do
+	echo "Printing ${FILE} on ${UNIPRINTER} as ${UNIUSER}@${UNIHOST}"
+	cat ${FILE} | ssh $UNIUSER@$UNIHOST "lpr -P ${UNIPRINTER} ${UNIOPTIONS} ${ADDITIONALOPTIONS}"
+done
